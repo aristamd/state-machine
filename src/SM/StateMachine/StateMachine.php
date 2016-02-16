@@ -29,6 +29,11 @@ class StateMachine implements StateMachineInterface
     protected $object;
 
     /**
+     * @var object
+     */
+    protected $workflowClass;
+
+    /**
      * @var array
      */
     protected $config;
@@ -51,21 +56,20 @@ class StateMachine implements StateMachineInterface
      *
      * @throws SMException If object doesn't have configured property path for state
      */
-    public function __construct(
-        $object,
-        array $config,
-        EventDispatcherInterface $dispatcher      = null,
-        CallbackFactoryInterface $callbackFactory = null
-    ) {
+    public function __construct( $object, $workflowClass )
+    {
+
+        $this->workflowClass = $workflowClass;
+
         $this->object          = $object;
-        $this->dispatcher      = $dispatcher;
-        $this->callbackFactory = $callbackFactory ?: new CallbackFactory('SM\Callback\Callback');
+
+        $this->callbackFactory = new CallbackFactory('SM\Callback\Callback');
 
         if (!isset($config['property_path'])) {
             $config['property_path'] = 'state';
         }
 
-        $this->config = $config;
+        $this->config = $workflowClass->config;
 
         // Test if the given object has the given state property path
         try {
@@ -137,14 +141,39 @@ class StateMachine implements StateMachineInterface
             }
         }
 
-        $this->callCallbacks($event, 'before');
+
+        $this->callMethod('before',$transition);
 
         $this->setState($this->config['transitions'][$transition]['to']);
 
-        $this->callCallbacks($event, 'after');
+        $this->callMethod('after',$transition);
 
         if (null !== $this->dispatcher) {
             $this->dispatcher->dispatch(SMEvents::POST_TRANSITION, $event);
+        }
+
+        return true;
+    }
+
+    /**
+     * Type is either a before or after.
+     * @param  [type] $type   [description]
+     * @param  [type] $action [description]
+     * @return [type]         [description]
+     */
+    public function callMethod($type, $action)
+    {
+        $methodName = $type.ucfirst(($action));
+
+        //Check if it exits and call it.
+        if( method_exists ( $this->workflowClass, $methodName ))
+        {
+
+            $this->workflowClass->{$methodName}( $this->object );
+
+        } else
+        {
+            echo "didnt find the method: ".$methodName;
         }
 
         return true;
