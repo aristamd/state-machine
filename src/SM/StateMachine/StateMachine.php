@@ -49,6 +49,12 @@ class StateMachine implements StateMachineInterface
     protected $callbackFactory;
 
     /**
+     * [$previousState description]
+     * @var String
+     */
+    protected $previousState;
+
+    /**
      * @param object                   $object          Underlying object for the state machine
      * @param array                    $config          Config array of the graph
      * @param EventDispatcherInterface $dispatcher      EventDispatcher or null not to dispatch events
@@ -64,6 +70,8 @@ class StateMachine implements StateMachineInterface
         $this->object          = $object;
 
         $this->callbackFactory = new CallbackFactory('SM\Callback\Callback');
+
+        $this->previousState = null;
 
         if (!isset($config['property_path'])) {
             $config['property_path'] = 'state';
@@ -144,6 +152,8 @@ class StateMachine implements StateMachineInterface
 
         $this->callMethod('before',$transition);
 
+        $this->previousState = $this->getState();
+
         $this->setState($this->config['transitions'][$transition]['to']);
 
         $this->callMethod('after',$transition);
@@ -168,8 +178,7 @@ class StateMachine implements StateMachineInterface
         //Check if it exits and call it.
         if( method_exists ( $this->workflowClass, $methodName ))
         {
-
-            $this->workflowClass->{$methodName}( $this->object );
+            $this->workflowClass->{$methodName}( $this->object, $this->previousState );
 
         } else
         {
