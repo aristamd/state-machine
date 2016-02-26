@@ -149,14 +149,13 @@ class StateMachine implements StateMachineInterface
             }
         }
 
-
-        $this->callMethod('before',$transition);
+        $this->executeTransitionHook('before',$transition);
 
         $this->previousState = $this->getState();
 
         $this->setState($this->config['transitions'][$transition]['to']);
 
-        $this->callMethod('after',$transition);
+        $this->executeTransitionHook('after',$transition);
 
         if (null !== $this->dispatcher) {
             $this->dispatcher->dispatch(SMEvents::POST_TRANSITION, $event);
@@ -166,26 +165,17 @@ class StateMachine implements StateMachineInterface
     }
 
     /**
-     * Type is either a before or after.
-     * @param  [type] $type   [description]
-     * @param  [type] $action [description]
-     * @return [type]         [description]
+     * Handles calling the before/after method on the workflowClass attached to
+     * this state machine instance for the transition specified
+     *
+     * @param  string $type either "before" or "after"
+     * @param  string $transition name of a defined transition
+     * @return boolean
      */
-    public function callMethod($type, $action)
+    public function executeTransitionHook($type, $transition)
     {
-        $methodName = $type.ucfirst(($action));
-
-        //Check if it exits and call it.
-        if( method_exists ( $this->workflowClass, $methodName ))
-        {
-            $this->workflowClass->{$methodName}( $this->object, $this->previousState );
-
-        } else
-        {
-            echo "didnt find the method: ".$methodName;
-        }
-
-        return true;
+        $methodName = $type . self::studlyCase($transition);
+        return $this->workflowClass->{$methodName}( $this->object, $this->previousState );
     }
 
     /**
@@ -265,5 +255,24 @@ class StateMachine implements StateMachineInterface
 
             call_user_func($callback, $event);
         }
+    }
+
+    /**
+     * Converts transition names such as my_transition to something suitable
+     * for a method name such as MyTransition
+     *
+     * @param string $string string to be converted
+     * @return string
+     */
+    private static function studlyCase( $string )
+    {
+        // Break words seperated by a dash or underscore into distinct words
+        $string = str_replace(['-', '_'], ' ', $string);
+
+        // Upper case the first letter of each word
+        $string = ucwords($string);
+
+        // Join the words back into a single string and return the result
+        return str_replace(' ', '', $string);
     }
 }
