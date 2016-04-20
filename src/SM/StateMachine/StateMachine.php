@@ -149,7 +149,11 @@ class StateMachine implements StateMachineInterface
             }
         }
 
-        $this->executeTransitionHook('before',$transition);
+        $transition_result = $this->executeTransitionHook('before',$transition);
+
+        if(false===$transition_result){
+            return false;
+        }
 
         $this->previousState = $this->getState();
 
