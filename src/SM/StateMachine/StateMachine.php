@@ -20,6 +20,8 @@ use SM\SMException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
+use Log;
+use App\Services\Helpers\LoggerHelper;
 
 class StateMachine implements StateMachineInterface
 {
@@ -83,8 +85,8 @@ class StateMachine implements StateMachineInterface
         try {
             $this->getState();
         } catch (NoSuchPropertyException $e) {
-            throw new SMException(sprintf(
-               'Cannot access to configured property path %s on object %s with graph %s',
+            throw $this->getException(sprintf(
+                'Cannot access to configured property path %s on object %s with graph %s',
                 $config['property_path'],
                 get_class($object),
                 $config['graph']
@@ -93,17 +95,46 @@ class StateMachine implements StateMachineInterface
     }
 
     /**
+     * It returns an exception including some additional fields like:
+     *  - previous state
+     *  - current state
+     *  - object (referral/econsult)
+     *
+     * @param $message     string   Message to create the exception
+     * @param $transition  string   Current transition (if available)
+     * @return SMException
+     */
+    private function getException( $message, $transition="" )
+    {
+        $to = emptyString($transition) ? $transition : $this->config['transitions'][$transition];
+        return new SMException( $message, $this->getState(), $to, $this->object );
+    }
+
+    /**
+     * It returns an array with the event and object info
+     *
+     * @param $transition   String  The current event performed
+     * @return array
+     */
+    private function getLogInfoArray( $transition )
+    {
+        $infoArray = ['from_status' => $this->getState(), 'to_status' => $this->config['transitions'][$transition]['to'],
+            'transition_name' => $transition, 'graph' =>$this->getGraph(), 'event' => 'transition', 'component' => 'state machine' ];
+        return LoggerHelper::addObjectInfo( $infoArray, $this->object );
+    }
+
+    /**
      * {@inheritDoc}
      */
     public function can($transition)
     {
         if (!isset($this->config['transitions'][$transition])) {
-            throw new SMException(sprintf(
+            throw $this->getException(sprintf(
                 'Transition %s does not exist on object %s with graph %s',
                 $transition,
                 get_class($this->object),
                 $this->config['graph']
-            ));
+            ), $transition );
         }
 
         if (!in_array($this->getState(), $this->config['transitions'][$transition]['from'])) {
@@ -125,18 +156,20 @@ class StateMachine implements StateMachineInterface
      */
     public function apply($transition, $soft = false)
     {
+        Log::info("Execute transition {$transition} on {$this->getGraph()}", $this->getLogInfoArray($transition));
+
         if (!$this->can($transition)) {
             if ($soft) {
                 return false;
             }
 
-            throw new SMException(sprintf(
+            throw $this->getException(sprintf(
                 'Transition %s cannot be applied on state %s of object %s with graph %s',
                 $transition,
                 $this->getState(),
                 get_class($this->object),
                 $this->config['graph']
-            ));
+            ), $transition );
         }
 
         $event = new TransitionEvent($transition, $this->getState(), $this->config['transitions'][$transition], $this);
@@ -228,7 +261,7 @@ class StateMachine implements StateMachineInterface
     protected function setState($state)
     {
         if (!in_array($state, $this->config['states'])) {
-            throw new SMException(sprintf(
+            throw $this->getException(sprintf(
                 'Cannot set the state to %s to object %s with graph %s because it is not pre-defined.',
                 $state,
                 get_class($this->object),
