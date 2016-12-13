@@ -11,7 +11,6 @@
 
 namespace SM\StateMachine;
 
-use Core\Services\Helpers\EConsult;
 use SM\Callback\CallbackFactory;
 use SM\Callback\CallbackFactoryInterface;
 use SM\Callback\CallbackInterface;
@@ -22,7 +21,6 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Log;
-use App\Models\EConsult as EconsultModel;
 use App\Services\Helpers\LoggerHelper;
 
 class StateMachine implements StateMachineInterface
