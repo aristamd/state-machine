@@ -106,8 +106,7 @@ class StateMachine implements StateMachineInterface
      */
     private function getException( $message, $transition="" )
     {
-        $to = emptyString($transition) ? $transition : $this->config['transitions'][$transition];
-        return new SMException( $message, $this->getState(), $to, $this->object );
+        return new SMException( $message, $this->getLogInfoArray($transition) );
     }
 
     /**
@@ -118,7 +117,8 @@ class StateMachine implements StateMachineInterface
      */
     private function getLogInfoArray( $transition )
     {
-        $infoArray = ['from_status' => $this->getState(), 'to_status' => $this->config['transitions'][$transition]['to'],
+        $to = emptyString($transition) ? $transition : $this->config['transitions'][$transition];
+        $infoArray = ['from_status' => $this->getState(), 'to_status' => $to,
             'transition_name' => $transition, 'graph' =>$this->getGraph(), 'event' => 'transition', 'component' => 'state machine' ];
         return LoggerHelper::addObjectInfo( $infoArray, $this->object );
     }
