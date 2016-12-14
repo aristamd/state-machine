@@ -23,16 +23,12 @@ class SMException extends \Exception
     /**
      * SMException constructor.
      *
-     * @param string $message  original Exception message
-     * @param string $from     Previous status of the object referral/econsult
-     * @param string $to       Current status of the object
-     * @param mix $object      This can be an econsult or referral object
+     * @param string $message  original     Exception message
+     * @param array  $additionalLogInfo     Additional log info
      */
-    public function __construct( $message=null, $from=null, $to=null, $object=null )
+    public function __construct( $message=null, $additionalLogInfo )
     {
         parent::__construct( $message, 0, null );
-        $this->additionalLogInfo['from_status'] = $from;
-        $this->additionalLogInfo['to_status'] = $to;
-        $this->additionalLogInfo['object'] = $object;
+        $this->additionalLogInfo = $additionalLogInfo;
     }
 }
